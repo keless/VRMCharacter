@@ -344,7 +344,6 @@ export default function CharacterModel({
     const t = state.clock.getElapsedTime()
     const breathe = 1 + Math.sin(t * 1.5) * 0.008
 
-    // @ts-expect-error vrmRef is three-vrm VRM instance
     const vrm = vrmRef.current as { humanoid?: { getRawBoneNode: (name: string) => THREE.Object3D | null } }
     if (vrm?.humanoid) {
       const chest = vrm.humanoid.getRawBoneNode('chest')

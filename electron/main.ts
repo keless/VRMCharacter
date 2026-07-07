@@ -21,7 +21,8 @@ function createWindow(): void {
   })
 
   // Capture renderer console output
-  mainWindow.webContents.on('console-message', (_event, _level, message, _line, _sourceId) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mainWindow.webContents.on('console-message', (_event: any, _level: any, message: string) => {
     console.log(`[renderer] ${message}`)
   })
 

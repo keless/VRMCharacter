@@ -56,7 +56,8 @@ fi
 echo ""
 
 # Check for errors
-ERROR_COUNT=$(grep -cE "Global error|Uncaught|OOM|Error:" "$ELEC_LOG" 2>/dev/null || echo "0")
+ERROR_COUNT=$(grep -cE "Global error|Uncaught|OOM|Error:" "$ELEC_LOG" 2>/dev/null || true)
+ERROR_COUNT=${ERROR_COUNT:-0}
 if [ "$ERROR_COUNT" -gt 0 ]; then
   echo "ERRORS FOUND ($ERROR_COUNT):"
   grep -E "Global error|Uncaught|OOM|Error:" "$ELEC_LOG" 2>/dev/null | sed 's/^/  /' | head -10
