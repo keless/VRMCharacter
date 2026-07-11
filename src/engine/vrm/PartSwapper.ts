@@ -1,3 +1,6 @@
+import { logger } from '../../lib/logger'
+
+const animLog = logger('PartSwapper')
 import type { CharacterAsset } from '../../types'
 
 /**
@@ -68,7 +71,7 @@ export class PartSwapper {
   swap(part: string, asset: CharacterAsset): void {
     const entry = this.parts.get(part)
     if (!entry) {
-      console.warn(`Part category not registered: ${part}`)
+      animLog.warn(`Part category not registered: ${part}`)
       return
     }
 
@@ -78,7 +81,7 @@ export class PartSwapper {
     // Notify listeners
     this.onChangeCallbacks.forEach((cb) => cb(part, asset))
 
-    console.log(`Swapped ${part}: ${prev?.name ?? 'none'} → ${asset.name}`)
+    animLog.log(`Swapped ${part}: ${prev?.name ?? 'none'} → ${asset.name}`)
   }
 
   /**

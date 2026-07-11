@@ -7,11 +7,12 @@ export interface CharacterAsset {
   _file?: unknown // internal: the File object for loading
 }
 
-// Animation asset (glTF file from Mixamo)
+// Animation asset (glTF, FBX, or VRMA animation file)
 export interface AnimationAsset {
   id: string
   name: string
   filePath: string
+  type: 'glb' | 'fbx' | 'vrma'
   duration: number
   clips: AnimationClipInfo[]
 }

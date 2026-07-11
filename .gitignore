@@ -16,3 +16,6 @@ release/
 
 # Logs
 *.log
+
+# Built-in animation files (large binary assets, kept locally)
+public/animations/

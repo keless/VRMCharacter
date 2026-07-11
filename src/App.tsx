@@ -2,14 +2,33 @@ import React, { useState, useCallback, useRef, useEffect } from 'react'
 import CharacterScene from './scenes/CharacterScene'
 import ChatPanel from './components/ChatPanel'
 import AssetPicker from './components/AssetPicker'
+import AnimationPicker from './components/AnimationPicker'
+import { loadBuiltInAnimations } from './engine/vrm/AnimationLoader'
+import { animationController } from './engine/vrm/AnimationController'
+import { logger, setLogging, isEnabled } from './lib/logger'
 import type { CharacterAsset, ChatMessage, AnimationAsset } from './types'
 
-// Global error handler
+// Global error handler (always on)
+const globalLog = logger('Global')
 window.addEventListener('error', (e) => {
-  console.error('Global error:', e.error)
+  globalLog.error('Global error:', e.error)
 })
 window.addEventListener('unhandledrejection', (e) => {
-  console.error('Unhandled rejection:', e.reason)
+  globalLog.error('Unhandled rejection:', e.reason)
+})
+
+// Enable diagnostic logging if VITE_DEBUG_LOGS is set
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const debugFlag = (import.meta.env as any).VITE_DEBUG_LOGS
+if (debugFlag) {
+  setLogging(true)
+}
+// Also allow runtime toggle: window.__DEBUG_LOGGING__ = true
+Object.defineProperty(window, '__DEBUG_LOGGING__', {
+  configurable: true,
+  enumerable: false,
+  get(): boolean { return isEnabled() },
+  set(value: boolean) { setLogging(value) },
 })
 
 export default function App() {
@@ -19,70 +38,97 @@ export default function App() {
   const [clothingAsset, setClothingAsset] = useState<CharacterAsset | null>(null)
   const [animations, setAnimations] = useState<AnimationAsset[]>([])
   const [currentAnimation, setCurrentAnimation] = useState<string | null>(null)
+  const [isLooping, setIsLooping] = useState(false)
   const [debugInfo, setDebugInfo] = useState<string>('')
   const [appReady, setAppReady] = useState(false)
   const [bodyBuffer, setBodyBuffer] = useState<ArrayBuffer | null>(null)
   const autoLoadedRef = useRef(false)
 
-  // Hidden file inputs
-  const bodyInputRef = useRef<HTMLInputElement>(null)
+  // Diagnostic logger (enabled via VITE_DEBUG_LOGS=1)
+  const appLog = logger('App')
+
+  // Idle cycling disabled — animation selection is now manual-only via the AnimationPicker.
+
+  // Hidden file inputs (hair/clothing only — body uses Electron dialog)
   const hairInputRef = useRef<HTMLInputElement>(null)
   const clothingInputRef = useRef<HTMLInputElement>(null)
 
   // Mount debug
   useEffect(() => {
-    console.log('App mounted, setting up file inputs...')
+    appLog.log('App mounted, setting up file inputs...')
+    // Load built-in animations on startup
+    loadBuiltInAnimations().then((builtIn) => {
+      // Register with the animation controller
+      animationController.setAssets(builtIn)
+      setAnimations(builtIn)
+    })
     setAppReady(true)
   }, [])
 
-  // Auto-load VRM from VITE_VRM_PATH env var (programmatic loading)
+  // Auto-load VRM: VITE_VRM_PATH (env) takes priority, then localStorage (persisted path)
   useEffect(() => {
     if (autoLoadedRef.current) {
-      console.log('[App] Auto-load already in progress, skipping')
+      appLog.log('Auto-load already in progress, skipping')
       return
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const vrmPath = (import.meta.env as any).VITE_VRM_PATH
-    if (!vrmPath) {
-      console.log('[App] No VITE_VRM_PATH set, skipping auto-load')
-      return
-    }
-    console.log('[App] Auto-loading VRM from:', vrmPath)
-    autoLoadedRef.current = true
-    setAppReady(false)
-
-    // Check if we're in Electron (electronAPI available)
-    if (window.electronAPI && window.electronAPI.loadVrmFromPath) {
-      window.electronAPI.loadVrmFromPath(vrmPath)
-        .then((bytes: Uint8Array) => {
-          console.log('[App] VRM loaded via IPC:', bytes.length, 'bytes')
-          const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-          setBodyBuffer(arrayBuffer)
-          setAppReady(true)
-        })
-        .catch((err: unknown) => {
-          console.error('[App] Failed to load VRM via IPC:', err)
-          setAppReady(true)
-        })
-    } else {
-      console.warn('[App] electronAPI not available — running in browser mode, cannot load from path')
+    if (!window.electronAPI || !window.electronAPI.loadVrmFromPath) {
+      appLog.log('electronAPI not available — running in browser mode, skipping auto-load')
       setAppReady(true)
+      return
+    }
+
+    const loadFromPath = async (label: string, filePath: string) => {
+      appLog.log(`Auto-loading VRM from ${label}:`, filePath)
+      autoLoadedRef.current = true
+      setAppReady(false)
+      try {
+        const bytes = await window.electronAPI.loadVrmFromPath(filePath)
+        appLog.log('VRM loaded via IPC:', bytes.length, 'bytes')
+        const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+        const assetName = filePath.split(/[/\\]/).pop()!.replace(/\.vrm$/i, '')
+        setBodyAsset({
+          id: `auto-${filePath}`,
+          name: assetName,
+          category: 'body',
+          filePath,
+        })
+        setBodyBuffer(arrayBuffer)
+        setAppReady(true)
+      } catch (err: unknown) {
+        appLog.error(`Failed to load VRM from ${label}:`, err)
+        setAppReady(true)
+      }
+    }
+
+    // Priority 1: VITE_VRM_PATH env var (programmatic/testing)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const envPath = (import.meta.env as any).VITE_VRM_PATH
+    if (envPath) {
+      loadFromPath('VITE_VRM_PATH', envPath)
+      return
+    }
+
+    // Priority 2: Persisted path from localStorage
+    const savedPath = localStorage.getItem('lastVrmPath')
+    if (savedPath) {
+      appLog.log('Restoring last VRM from localStorage:', savedPath)
+      loadFromPath('localStorage', savedPath)
     }
   }, [])
 
-  // Handle file selection via hidden <input> elements
+  // Handle file selection via hidden <input> elements (hair/clothing only)
   const handleFileChange = useCallback(
     (
       event: React.ChangeEvent<HTMLInputElement>,
-      category: 'body' | 'hair' | 'clothing'
+      category: 'hair' | 'clothing'
     ) => {
-      console.log('File input changed for:', category)
+      appLog.log('File input changed for:', category)
       const file = event.target.files?.[0]
       if (!file) {
-        console.log('No file selected')
+        appLog.log('No file selected')
         return
       }
-      console.log('File selected:', file.name, file.size, 'bytes')
+      appLog.log('File selected:', file.name, file.size, 'bytes')
 
       const asset: CharacterAsset = {
         id: `${category}-${file.name}-${Date.now()}`,
@@ -91,9 +137,8 @@ export default function App() {
         filePath: `file://${file.name}`,
         _file: file as unknown as string,
       }
-      console.log('Setting asset:', asset)
-      if (category === 'body') setBodyAsset(asset)
-      else if (category === 'hair') setHairAsset(asset)
+      appLog.log('Setting asset:', asset)
+      if (category === 'hair') setHairAsset(asset)
       else setClothingAsset(asset)
 
       // Reset input so the same file can be selected again
@@ -101,6 +146,46 @@ export default function App() {
     },
     []
   )
+
+  // Handle body VRM selection via Electron file dialog (exposes real filesystem path)
+  const handleBodySelect = useCallback(async () => {
+    if (!window.electronAPI?.showOpenFileDialog) {
+      appLog.warn('Electron file dialog not available')
+      return
+    }
+    const result = await window.electronAPI.showOpenFileDialog({
+      title: 'Select VRM body model',
+      filters: [{ name: 'VRM Model', extensions: ['vrm'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      appLog.log('Body selection canceled')
+      return
+    }
+    const filePath = result.filePaths[0]
+    appLog.log('Body VRM selected:', filePath)
+
+    // Save path to localStorage for auto-restore on next launch
+    localStorage.setItem('lastVrmPath', filePath)
+
+    const asset: CharacterAsset = {
+      id: `body-${filePath}-${Date.now()}`,
+      name: filePath.split(/[/\\]/).pop()!.replace(/\.vrm$/i, ''),
+      category: 'body',
+      filePath,
+    }
+    setBodyAsset(asset)
+
+    // Load the file via IPC
+    try {
+      const bytes = await window.electronAPI.loadVrmFromPath(filePath)
+      appLog.log('Body VRM loaded:', bytes.length, 'bytes')
+      const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+      setBodyBuffer(arrayBuffer)
+    } catch (err: unknown) {
+      appLog.error('Failed to load body VRM:', err)
+    }
+  }, [])
 
   const handleSendMessage = useCallback((text: string) => {
     const userMessage: ChatMessage = {
@@ -123,12 +208,24 @@ export default function App() {
         expression: response.expression,
       }
       setMessages((prev) => [...prev, charMessage])
-      if (response.animationId) {
-        setCurrentAnimation(response.animationId)
-      }
+      // Animation selection is now manual-only via the AnimationPicker.
+      // The animationId/expression from the responder is stored in the
+      // message for logging but no longer triggers playback.
     },
     []
   )
+
+  // Manual animation control (AnimationPicker)
+  const handlePlayAnimation = useCallback(
+    (animationId: string) => {
+      setCurrentAnimation(animationId)
+    },
+    []
+  )
+
+  const handleLoopToggle = useCallback((looping: boolean) => {
+    setIsLooping(looping)
+  }, [])
 
   return (
     <div style={styles.container}>
@@ -144,14 +241,7 @@ export default function App() {
         </span>
       </div>
 
-      {/* Hidden file inputs */}
-      <input
-        ref={bodyInputRef}
-        type="file"
-        accept=".vrm"
-        style={{ display: 'none' }}
-        onChange={(e) => handleFileChange(e, 'body')}
-      />
+      {/* Hidden file inputs (hair/clothing only — body uses Electron dialog) */}
       <input
         ref={hairInputRef}
         type="file"
@@ -175,11 +265,17 @@ export default function App() {
         clothingAsset={clothingAsset}
         animations={animations}
         currentAnimation={currentAnimation}
-        onAnimationEnded={() => setCurrentAnimation(null)}
-        onLoadBody={() => {
-          console.log('Load body button clicked')
-          bodyInputRef.current?.click()
+        isLooping={isLooping}
+        onAnimationEnded={() => {
+          if (isLooping && currentAnimation) {
+            // Restart the same animation for continuous looping
+            setCurrentAnimation(currentAnimation)
+          } else {
+            // Animation finished — stop playback
+            setCurrentAnimation(null)
+          }
         }}
+        onLoadBody={handleBodySelect}
         debugInfo={debugInfo}
         onDebugInfo={setDebugInfo}
       />
@@ -189,10 +285,7 @@ export default function App() {
         bodyAsset={bodyAsset}
         hairAsset={hairAsset}
         clothingAsset={clothingAsset}
-        onBodySelect={() => {
-          console.log('AssetPicker: Load body clicked')
-          bodyInputRef.current?.click()
-        }}
+        onBodySelect={handleBodySelect}
         onHairSelect={() => hairInputRef.current?.click()}
         onClothingSelect={() => clothingInputRef.current?.click()}
       />
@@ -201,6 +294,15 @@ export default function App() {
         messages={messages}
         onSend={handleSendMessage}
         onCharacterResponse={handleCharacterResponse}
+      />
+
+      {/* Animation picker — bottom left */}
+      <AnimationPicker
+        animations={animations}
+        currentAnimation={currentAnimation}
+        onPlay={handlePlayAnimation}
+        isLooping={isLooping}
+        onLoopToggle={handleLoopToggle}
       />
     </div>
   )

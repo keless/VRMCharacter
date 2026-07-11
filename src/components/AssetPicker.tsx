@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import type { CharacterAsset } from '../types'
 
 interface AssetPickerProps {
@@ -12,6 +12,7 @@ interface AssetPickerProps {
 
 /**
  * Floating panel for selecting character assets (body, hair, clothing).
+ * Animations are built-in and auto-loaded.
  * Triggers file picker dialogs via parent component.
  */
 export default function AssetPicker({
@@ -91,6 +92,13 @@ export default function AssetPicker({
             >
               {clothingAsset ? 'Change Clothing' : 'Load Clothing'}
             </button>
+          </div>
+
+          <div style={styles.divider} />
+
+          <div style={styles.section}>
+            <div style={styles.label}>Animations</div>
+            <span style={{ ...styles.inactive, fontSize: 11 }}>67 built-in animations loaded</span>
           </div>
         </div>
       )}

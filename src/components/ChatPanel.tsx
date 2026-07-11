@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { logger } from '../lib/logger'
+
+const chatLog = logger('ChatPanel')
 import type { ChatMessage } from '../types'
 import { mockResponder } from '../engine/chat/MockResponder'
+import { animationController } from '../engine/vrm/AnimationController'
 
 interface ChatPanelProps {
   messages: ChatMessage[]
@@ -37,9 +41,21 @@ export default function ChatPanel({
 
     try {
       const response = await mockResponder.respond(text)
-      onCharacterResponse(response)
+      // Resolve the keyword to an actual animation ID
+      let animationId: string | undefined
+      if (response.animationId) {
+        const resolved = animationController.resolve(response.animationId)
+        if (resolved) {
+          animationId = resolved
+        }
+      }
+      onCharacterResponse({
+        text: response.text,
+        animationId,
+        expression: response.expression,
+      })
     } catch (err) {
-      console.error('Chat response failed:', err)
+      chatLog.error('Chat response failed:', err)
     } finally {
       setSending(false)
     }

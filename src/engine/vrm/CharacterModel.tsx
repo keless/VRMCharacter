@@ -4,8 +4,13 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
+import { VRMLookAtQuaternionProxy } from '@pixiv/three-vrm-animation'
+import type { VRMCore } from '@pixiv/three-vrm-core'
 import AnimationPlayer from './AnimationPlayer'
 import type { CharacterAsset, AnimationAsset } from '../../types'
+import { logger } from '../../lib/logger'
+
+const animLog = logger('CharacterModel')
 
 /**
  * Loads a VRM model and renders it in the scene.
@@ -18,6 +23,7 @@ export default function CharacterModel({
   clothingAsset,
   animations,
   currentAnimation,
+  isLooping,
   onAnimationEnded,
   onDebugInfo,
 }: {
@@ -27,6 +33,7 @@ export default function CharacterModel({
   clothingAsset: CharacterAsset | null
   animations: AnimationAsset[]
   currentAnimation: string | null
+  isLooping: boolean
   onAnimationEnded: () => void
   onDebugInfo: (info: string) => void
 }) {
@@ -48,51 +55,51 @@ export default function CharacterModel({
     onLoaded: (model: THREE.Group, vrmData: unknown) => void,
     onError: (err: unknown) => void
   ) => {
-    console.log('[loadVrmFrom] Starting load for:', file.name, file.size, 'bytes')
+    animLog.log('loadVrmFrom Starting load for:', file.name, file.size, 'bytes')
     const reader = new FileReader()
     reader.onload = (e) => {
       const arrayBuffer = e.target?.result as ArrayBuffer
-      console.log('[loadVrmFrom] FileReader.onload, ArrayBuffer size:', arrayBuffer?.byteLength)
+      animLog.log('loadVrmFrom FileReader.onload, ArrayBuffer size:', arrayBuffer?.byteLength)
       if (!arrayBuffer) {
         onError(new Error('Failed to read file as ArrayBuffer'))
         return
       }
 
-      console.log('[loadVrmFrom] Creating GLTFLoader and VRMLoaderPlugin')
+      animLog.log('loadVrmFrom Creating GLTFLoader and VRMLoaderPlugin')
       const loader = new GLTFLoader()
       loader.register((parser: any) => {
-        console.log('[loadVrmFrom] VRMLoaderPlugin registered')
+        animLog.log('loadVrmFrom VRMLoaderPlugin registered')
         return new VRMLoaderPlugin(parser)
       })
 
-      console.log('[loadVrmFrom] Calling loader.parse()')
+      animLog.log('loadVrmFrom Calling loader.parse()')
       try {
         loader.parse(
           arrayBuffer,
           '',
           (gltf: GLTF) => {
-            console.log('[loadVrmFrom] parse() onLoad callback fired!')
+            animLog.log('loadVrmFrom parse() onLoad callback fired!')
             const model = gltf.scene
-            const vrmData = (gltf as unknown as { userData: { vrm?: unknown } }).userData.vrm
-            console.log('[loadVrmFrom] Model children:', model.children.length, 'VRM data:', !!vrmData)
+            const vrmData = (gltf as unknown as { userData: { vrm?: unknown; vrmCore?: unknown } }).userData.vrm ?? (gltf as unknown as { userData: { vrmCore?: unknown } }).userData.vrmCore
+            animLog.log('loadVrmFrom Model children:', model.children.length, 'VRM data:', !!vrmData)
             onLoaded(model, vrmData)
           },
           (err: unknown) => {
-            console.error('[loadVrmFrom] parse() onError callback fired:', err)
+            animLog.error('loadVrmFrom parse() onError callback fired:', err)
             onError(err)
           }
         )
-        console.log('[loadVrmFrom] loader.parse() returned (synchronous)')
+        animLog.log('loadVrmFrom loader.parse() returned (synchronous)')
       } catch (err) {
-        console.error('[loadVrmFrom] loader.parse() threw synchronously:', err)
+        animLog.error('loadVrmFrom loader.parse() threw synchronously:', err)
         onError(err)
       }
     }
     reader.onerror = () => {
-      console.error('[loadVrmFrom] FileReader.onerror:', reader.error)
+      animLog.error('loadVrmFrom FileReader.onerror:', reader.error)
       onError(reader.error)
     }
-    console.log('[loadVrmFrom] Calling reader.readAsArrayBuffer()')
+    animLog.log('loadVrmFrom Calling reader.readAsArrayBuffer()')
     reader.readAsArrayBuffer(file)
   }
 
@@ -102,33 +109,33 @@ export default function CharacterModel({
     onLoaded: (model: THREE.Group, vrmData: unknown) => void,
     onError: (err: unknown) => void
   ) => {
-    console.log('[loadVrmFromBuffer] Starting load, ArrayBuffer size:', arrayBuffer.byteLength)
+    animLog.log('loadVrmFromBuffer Starting load, ArrayBuffer size:', arrayBuffer.byteLength)
     const loader = new GLTFLoader()
     loader.register((parser: any) => {
-      console.log('[loadVrmFromBuffer] VRMLoaderPlugin registered')
+      animLog.log('loadVrmFromBuffer VRMLoaderPlugin registered')
       return new VRMLoaderPlugin(parser)
     })
 
-    console.log('[loadVrmFromBuffer] Calling loader.parse()')
+    animLog.log('loadVrmFromBuffer Calling loader.parse()')
     try {
       loader.parse(
         arrayBuffer,
         '',
         (gltf: GLTF) => {
-          console.log('[loadVrmFromBuffer] parse() onLoad callback fired!')
+          animLog.log('loadVrmFromBuffer parse() onLoad callback fired!')
           const model = gltf.scene
-          const vrmData = (gltf as unknown as { userData: { vrm?: unknown } }).userData.vrm
-          console.log('[loadVrmFromBuffer] Model children:', model.children.length, 'VRM data:', !!vrmData)
+          const vrmData = (gltf as unknown as { userData: { vrm?: unknown; vrmCore?: unknown } }).userData.vrm ?? (gltf as unknown as { userData: { vrmCore?: unknown } }).userData.vrmCore
+          animLog.log('loadVrmFromBuffer Model children:', model.children.length, 'VRM data:', !!vrmData)
           onLoaded(model, vrmData)
         },
         (err: unknown) => {
-          console.error('[loadVrmFromBuffer] parse() onError callback fired:', err)
+          animLog.error('loadVrmFromBuffer parse() onError callback fired:', err)
           onError(err)
         }
       )
-      console.log('[loadVrmFromBuffer] loader.parse() returned (synchronous)')
+      animLog.log('loadVrmFromBuffer loader.parse() returned (synchronous)')
     } catch (err) {
-      console.error('[loadVrmFromBuffer] loader.parse() threw synchronously:', err)
+      animLog.error('loadVrmFromBuffer loader.parse() threw synchronously:', err)
       onError(err)
     }
   }
@@ -136,7 +143,7 @@ export default function CharacterModel({
   // Trigger load when bodyAsset is set
   useEffect(() => {
     if (!bodyAsset) return
-    console.log('[CharacterModel] bodyAsset set, queuing load:', bodyAsset.name)
+    animLog.log('CharacterModel bodyAsset set, queuing load:', bodyAsset.name)
     setBodyAssetLoaded(bodyAsset)
   }, [bodyAsset])
 
@@ -144,19 +151,19 @@ export default function CharacterModel({
   // OR when bodyBuffer is provided (programmatic load)
   useEffect(() => {
     if (!groupRef.current) {
-      console.log('[CharacterModel] load skip: groupRef not ready')
+      animLog.log('CharacterModel load skip: groupRef not ready')
       return
     }
 
     // Guard against double loads (React Strict Mode)
     if (isLoadingRef.current) {
-      console.log('[CharacterModel] load skip: already loading')
+      animLog.log('CharacterModel load skip: already loading')
       return
     }
 
     // Buffer-based load (programmatic)
     if (bodyBuffer) {
-      console.log('[CharacterModel] Starting VRM load from buffer')
+      animLog.log('CharacterModel Starting VRM load from buffer')
       isLoadingRef.current = true
 
       // Clear previous model
@@ -181,16 +188,31 @@ export default function CharacterModel({
           const center = box.getCenter(new THREE.Vector3())
 
           const info = `${childCount} children, ${meshCount} meshes. Size: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}. Center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`
-          console.log('VRM Load (buffer):', info)
-          console.log('userData keys:', Object.keys(model.userData))
-          console.log('VRM data present:', !!vrmData)
+          animLog.log('VRM Load (buffer):', info)
+          animLog.log('userData keys:', Object.keys(model.userData))
+          animLog.log('VRM data present:', !!vrmData)
           onDebugInfo(info)
 
           groupRef.current!.add(model)
 
+          // VRM models face +Z by default. Camera is at +Z looking toward origin,
+          // so rotate 180° so the model faces the camera.
+          model.rotation.y = Math.PI
+
+          animLog.log('CharacterModel Model transform after load: pos=', model.position.toArray(), 'rot=', model.rotation.toArray(), 'scale=', model.scale.toArray())
+
           if (vrmData) {
             vrmRef.current = vrmData
             mixerRef.current = new THREE.AnimationMixer(model)
+
+            // Create VRMLookAtQuaternionProxy so VRMA animations
+            // with look-at data don't trigger a console warning.
+            if ((vrmData as any).lookAt) {
+              const proxy = new VRMLookAtQuaternionProxy((vrmData as any).lookAt)
+              proxy.name = 'VRMLookAtQuaternionProxy'
+              model.add(proxy)
+              animLog.log('Created VRMLookAtQuaternionProxy')
+            }
           } else {
             mixerRef.current = new THREE.AnimationMixer(model)
           }
@@ -200,7 +222,7 @@ export default function CharacterModel({
           isLoadingRef.current = false
         },
         (err) => {
-          console.error('Failed to load VRM body from buffer:', err)
+          animLog.error('Failed to load VRM body from buffer:', err)
           setError(err instanceof Error ? err.message : String(err))
           setLoading(false)
           isLoadingRef.current = false
@@ -211,11 +233,11 @@ export default function CharacterModel({
 
     // File-based load (file input)
     if (!bodyAssetLoaded) {
-      console.log('[CharacterModel] load skip: no bodyAssetLoaded')
+      animLog.log('CharacterModel load skip: no bodyAssetLoaded')
       return
     }
 
-    console.log('[CharacterModel] Starting VRM load from file')
+    animLog.log('CharacterModel Starting VRM load from file')
     isLoadingRef.current = true
 
     // Clear previous model
@@ -227,9 +249,9 @@ export default function CharacterModel({
     }
 
     const file = bodyAssetLoaded._file as File
-    console.log('[CharacterModel] file:', file?.name, 'is File:', file instanceof File)
+    animLog.log('CharacterModel file:', file?.name, 'is File:', file instanceof File)
     if (!(file instanceof File)) {
-      console.error('[CharacterModel] _file is not a File:', file)
+      animLog.error('CharacterModel _file is not a File:', file)
       setError('_file is not a File')
       setLoading(false)
       return
@@ -249,16 +271,31 @@ export default function CharacterModel({
         const center = box.getCenter(new THREE.Vector3())
 
         const info = `${childCount} children, ${meshCount} meshes. Size: ${size.x.toFixed(2)}x${size.y.toFixed(2)}x${size.z.toFixed(2)}. Center: (${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)})`
-        console.log('VRM Load:', info)
-        console.log('userData keys:', Object.keys(model.userData))
-        console.log('VRM data present:', !!vrmData)
+        animLog.log('VRM Load:', info)
+        animLog.log('userData keys:', Object.keys(model.userData))
+        animLog.log('VRM data present:', !!vrmData)
         onDebugInfo(info)
 
         groupRef.current!.add(model)
 
+        // VRM models face +Z by default. Camera is at +Z looking toward origin,
+        // so rotate 180° so the model faces the camera.
+        model.rotation.y = Math.PI
+
+        animLog.log('CharacterModel Model transform after load: pos=', model.position.toArray(), 'rot=', model.rotation.toArray(), 'scale=', model.scale.toArray())
+
         if (vrmData) {
           vrmRef.current = vrmData
           mixerRef.current = new THREE.AnimationMixer(model)
+
+          // Create VRMLookAtQuaternionProxy so VRMA animations
+          // with look-at data don't trigger a console warning.
+          if ((vrmData as any).lookAt) {
+            const proxy = new VRMLookAtQuaternionProxy((vrmData as any).lookAt)
+            proxy.name = 'VRMLookAtQuaternionProxy'
+            model.add(proxy)
+            animLog.log('Created VRMLookAtQuaternionProxy')
+          }
         } else {
           mixerRef.current = new THREE.AnimationMixer(model)
         }
@@ -268,7 +305,7 @@ export default function CharacterModel({
         isLoadingRef.current = false
       },
       (err) => {
-        console.error('Failed to load VRM body:', err)
+        animLog.error('Failed to load VRM body:', err)
         setError(err instanceof Error ? err.message : String(err))
         setLoading(false)
         isLoadingRef.current = false
@@ -300,10 +337,10 @@ export default function CharacterModel({
     loadVrmFrom(
       file,
       (model) => {
-        console.log('Hair loaded:', model.children.length, 'children')
+        animLog.log('Hair loaded:', model.children.length, 'children')
         groupRef.current!.add(model)
       },
-      (err) => console.error('Failed to load hair:', err)
+      (err) => animLog.error('Failed to load hair:', err)
     )
   }, [hairAsset, loading])
 
@@ -317,10 +354,10 @@ export default function CharacterModel({
     loadVrmFrom(
       file,
       (model) => {
-        console.log('Clothing loaded:', model.children.length, 'children')
+        animLog.log('Clothing loaded:', model.children.length, 'children')
         groupRef.current!.add(model)
       },
-      (err) => console.error('Failed to load clothing:', err)
+      (err) => animLog.error('Failed to load clothing:', err)
     )
   }, [clothingAsset, loading])
 
@@ -336,21 +373,6 @@ export default function CharacterModel({
 
     wireframeRef.current.position.copy(center)
     wireframeRef.current.scale.copy(size).multiplyScalar(1.05)
-  })
-
-  // Idle breathing animation
-  useFrame((state) => {
-    if (!groupRef.current || !vrmRef.current) return
-    const t = state.clock.getElapsedTime()
-    const breathe = 1 + Math.sin(t * 1.5) * 0.008
-
-    const vrm = vrmRef.current as { humanoid?: { getRawBoneNode: (name: string) => THREE.Object3D | null } }
-    if (vrm?.humanoid) {
-      const chest = vrm.humanoid.getRawBoneNode('chest')
-      if (chest) {
-        chest.scale.setScalar(breathe)
-      }
-    }
   })
 
   // Always render the group — placeholders go inside
@@ -378,9 +400,12 @@ export default function CharacterModel({
 
       <AnimationPlayer
         mixer={mixerRef.current}
+        model={loaded ? (groupRef.current!.children[0] as THREE.Group) : null}
         animations={animations}
         currentAnimation={currentAnimation}
+        isLooping={isLooping}
         onAnimationEnded={onAnimationEnded}
+        vrmCore={vrmRef.current as VRMCore | null}
       />
     </group>
   )

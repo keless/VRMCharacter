@@ -1,0 +1,14 @@
+{ 
+"permissions":
+
+  {                                                                                                                                                                        
+        "tool": "Bash",                                                                                                                                                        
+        "prompt": "run tests",                                                                                                                                                 
+        "status": "allowed"                                                                                                                                                    
+      },                                                                                                                                                                       
+      {                                                                                                                                                                        
+        "tool": "Bash",                                                                                                                                                        
+        "prompt": "git commit",                                                                                                                                                
+        "status": "allowed"                                                                                                                                                    
+      }
+}
