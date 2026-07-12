@@ -31,7 +31,6 @@ interface AnimationPlayerProps {
   model: THREE.Group | null
   animations: AnimationAsset[]
   currentAnimation: string | null
-  isLooping: boolean
   onAnimationEnded: () => void
   vrmCore: VRMCore | null
 }
@@ -59,7 +58,6 @@ export default function AnimationPlayer({
   model,
   animations,
   currentAnimation,
-  isLooping,
   onAnimationEnded,
   vrmCore,
 }: AnimationPlayerProps) {
@@ -358,7 +356,9 @@ export default function AnimationPlayer({
       // the crossfade. By starting at the second keyframe, the new action
       // begins from an animated pose, matching the old animation's end.
       const action = mixer.clipAction(clip)
-      action.loop = isLooping ? THREE.LoopRepeat : THREE.LoopOnce
+      // Idle animation always loops; other animations play once
+      action.loop =
+        resolvedId === 'builtin-idle' ? THREE.LoopRepeat : THREE.LoopOnce
       action.clampWhenFinished = true
       action.weight = 0
 
@@ -420,20 +420,25 @@ export default function AnimationPlayer({
       // animation, ensuring smooth transitions from the last frame.
       const mixerRef = mixer
       const onFinished = (event: { action: THREE.AnimationAction }) => {
-        if (event.action === action && !isLooping) {
-          mixerRef.removeEventListener('finished', onFinished)
+        if (event.action !== action) return
 
-          // Restore model position
-          if (initialPosRef.current && model) {
-            model.position.copy(initialPosRef.current)
-          }
+        // Idle animation: never remove listener, never call onAnimationEnded.
+        // This lets it loop continuously as the default pose.
+        if (resolvedId === 'builtin-idle') return
 
-          onAnimationEnded()
+        // Non-idle animations: clean up and signal completion
+        mixerRef.removeEventListener('finished', onFinished)
+
+        // Restore model position
+        if (initialPosRef.current && model) {
+          model.position.copy(initialPosRef.current)
         }
+
+        onAnimationEnded()
       }
       mixerRef.addEventListener('finished', onFinished)
     },
-    [mixer, model, onAnimationEnded, vrmCore, isLooping],
+    [mixer, model, onAnimationEnded, vrmCore],
   )
 
   // React to currentAnimation changes

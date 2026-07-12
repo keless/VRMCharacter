@@ -84,6 +84,9 @@ const KEYWORD_MAP: { keywords: string[]; animationId: string }[] = [
   { keywords: ['female lay', 'female laying', 'laying pose'], animationId: 'female-laying-pose' },
   { keywords: ['male lay', 'male laying', 'male laying pose'], animationId: 'male-laying' },
   { keywords: ['situp', 'sit up', 'get up', 'stand up', 'rise'], animationId: 'situp-to-idle' },
+
+  // === Idle / default pose (loops continuously, auto-reverted to after animations) ===
+  { keywords: ['idle', 'idle animation', 'default pose', 'rest pose'], animationId: 'idle' },
 ]
 
 /**

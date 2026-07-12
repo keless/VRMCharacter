@@ -23,7 +23,6 @@ export default function CharacterModel({
   clothingAsset,
   animations,
   currentAnimation,
-  isLooping,
   onAnimationEnded,
   onDebugInfo,
 }: {
@@ -33,7 +32,6 @@ export default function CharacterModel({
   clothingAsset: CharacterAsset | null
   animations: AnimationAsset[]
   currentAnimation: string | null
-  isLooping: boolean
   onAnimationEnded: () => void
   onDebugInfo: (info: string) => void
 }) {
@@ -403,7 +401,6 @@ export default function CharacterModel({
         model={loaded ? (groupRef.current!.children[0] as THREE.Group) : null}
         animations={animations}
         currentAnimation={currentAnimation}
-        isLooping={isLooping}
         onAnimationEnded={onAnimationEnded}
         vrmCore={vrmRef.current as VRMCore | null}
       />

@@ -37,7 +37,6 @@ export default function App() {
   const [clothingAsset, setClothingAsset] = useState<CharacterAsset | null>(null)
   const [animations, setAnimations] = useState<AnimationAsset[]>([])
   const [currentAnimation, setCurrentAnimation] = useState<string | null>(null)
-  const [isLooping, setIsLooping] = useState(false)
   const [debugInfo, setDebugInfo] = useState<string>('')
   const [appReady, setAppReady] = useState(false)
   const [bodyBuffer, setBodyBuffer] = useState<ArrayBuffer | null>(null)
@@ -257,14 +256,12 @@ export default function App() {
         clothingAsset={clothingAsset}
         animations={animations}
         currentAnimation={currentAnimation}
-        isLooping={isLooping}
         onAnimationEnded={() => {
-          if (isLooping && currentAnimation) {
-            // Restart the same animation for continuous looping
-            setCurrentAnimation(currentAnimation)
-          } else {
-            // Animation finished — stop playback
-            setCurrentAnimation(null)
+          // When an animation finishes, transition to the idle animation
+          // which loops continuously as the default pose
+          const idle = animationController.resolve('idle')
+          if (idle) {
+            setCurrentAnimation(idle)
           }
         }}
         onLoadBody={handleBodySelect}

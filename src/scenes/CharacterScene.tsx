@@ -12,7 +12,6 @@ interface CharacterSceneProps {
   clothingAsset: CharacterAsset | null
   animations: AnimationAsset[]
   currentAnimation: string | null
-  isLooping: boolean
   onAnimationEnded: () => void
   onLoadBody: () => void
   debugInfo: string
@@ -26,7 +25,6 @@ export default function CharacterScene({
   clothingAsset,
   animations,
   currentAnimation,
-  isLooping,
   onAnimationEnded,
   onLoadBody,
   debugInfo,
@@ -82,7 +80,6 @@ export default function CharacterScene({
             clothingAsset={clothingAsset}
             animations={animations}
             currentAnimation={currentAnimation}
-            isLooping={isLooping}
             onAnimationEnded={onAnimationEnded}
             onDebugInfo={onDebugInfo}
           />
