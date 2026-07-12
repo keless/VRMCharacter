@@ -26,6 +26,9 @@ function createWindow(): void {
     console.log(`[renderer] ${message}`)
   })
 
+  // Hide the default menu bar (File, Edit, View, Window)
+  mainWindow.setMenu(null)
+
   // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
