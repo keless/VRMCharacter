@@ -1,9 +1,32 @@
-import React from 'react'
+import { useState, useMemo } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import Ground from './Ground'
 import CharacterModel from '../engine/vrm/CharacterModel'
 import type { CharacterAsset, AnimationAsset } from '../types'
+
+// Chat panel width in pixels (matches ChatPanel.tsx)
+const CHAT_PANEL_WIDTH = 360
+
+/**
+ * Calculate the visible center offset ratio and camera offset.
+ * The chat panel blocks the right side of the screen, so the visible
+ * area center is shifted left. We shift the camera right to compensate.
+ */
+function useVisibleCenterOffset() {
+  const [width, setWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1920)
+
+  const offset = useMemo(() => {
+    // The chat panel blocks the right side, so the visible area center
+    // is shifted left by CHAT_PANEL_WIDTH / 2 pixels from screen center.
+    // Convert that to world-space offset: (chatWidth / 2 / viewportWidth) * cameraDistance
+    const distance = 2.5
+    const ratio = CHAT_PANEL_WIDTH / (2 * width)
+    return ratio * distance
+  }, [width])
+
+  return { offset }
+}
 
 interface CharacterSceneProps {
   bodyAsset: CharacterAsset | null
@@ -26,10 +49,12 @@ export default function CharacterScene({
   onAnimationEnded,
   onLoadBody,
 }: CharacterSceneProps) {
+  const { offset } = useVisibleCenterOffset()
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
       <Canvas
-        camera={{ position: [0, 1.1, 2.5], fov: 50, near: 0.1, far: 100 }}
+        camera={{ position: [offset, 1.1, 2.5], fov: 50, near: 0.1, far: 100 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: '#1a1a2e' }}
       >
@@ -58,7 +83,7 @@ export default function CharacterScene({
 
         {/* Camera Controls */}
         <OrbitControls
-          target={[0, 1.2, 0]}
+          target={[offset, 1.2, 0]}
           minDistance={1.5}
           maxDistance={6}
           minPolarAngle={Math.PI * 0.1}
