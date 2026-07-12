@@ -30,6 +30,79 @@ interface LlmResponse {
 }
 
 /**
+ * Extract JSON from LLM output that may be wrapped in markdown code fences
+ * or surrounded by extra text.
+ *
+ * Handles patterns like:
+ *   - Plain JSON: {"text": "..."}
+ *   - Markdown fence: ```json\n{...}\n```
+ *   - Markdown fence without lang: ```\n{...}\n```
+ *   - Extra text before/after
+ */
+function extractJson(text: string): string | null {
+  // Try the raw text first
+  try {
+    const parsed = JSON.parse(text)
+    return JSON.stringify(parsed)
+  } catch { /* fall through */ }
+
+  // Strip markdown code fences
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) {
+    try {
+      const inner = fenceMatch[1].trim()
+      JSON.parse(inner) // validate
+      return inner
+    } catch { /* fall through */ }
+  }
+
+  // Try to find a JSON object by locating matching braces
+  const firstBrace = text.indexOf('{')
+  if (firstBrace === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escape = false
+
+  for (let i = firstBrace; i < text.length; i++) {
+    const ch = text[i]
+
+    if (escape) {
+      escape = false
+      continue
+    }
+
+    if (ch === '\\') {
+      escape = true
+      continue
+    }
+
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+
+    if (inString) continue
+
+    if (ch === '{') {
+      depth++
+    } else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        const candidate = text.slice(firstBrace, i + 1)
+        try {
+          JSON.parse(candidate) // validate
+          return candidate
+        } catch { /* fall through */ }
+        break
+      }
+    }
+  }
+
+  return null
+}
+
+/**
  * LLM-driven chat responder.
  * Loads configuration from public/llm-config.json at runtime,
  * sends the user message (with system prompt + conversation history)
@@ -115,7 +188,7 @@ If you are unsure which animation to use, pick "idle" (the default resting pose)
     return messages
   }
 
-  async respond(message: string, history?: ChatHistoryEntry[]): Promise<ChatResponse> {
+  async respond(message: string, history?: ChatHistoryEntry[], attempt: number = 1): Promise<ChatResponse> {
     if (!this.config) {
       console.warn('[RealLlmResponder] Config not loaded yet, using defaults')
     }
@@ -127,7 +200,12 @@ If you are unsure which animation to use, pick "idle" (the default resting pose)
     // Limit history to contextSize most recent exchanges
     const recentHistory = history?.slice(-contextSize) ?? []
 
-    const messages = this.buildMessages(message, recentHistory)
+    let messages = this.buildMessages(message, recentHistory)
+
+    // On retry, add a corrective message so the LLM knows to fix its output
+    if (attempt > 1) {
+      messages = [...messages.slice(0, -1), { role: 'user', content: `You previously gave an invalid response. Respond with ONLY a JSON object in this exact format:\n{"text": "your response", "animationId": "animation-id", "expression": "happy" | "sad" | "neutral"}\nNo extra text, no markdown.` }]
+    }
 
     try {
       const body: LlmRequest = {
@@ -151,14 +229,25 @@ If you are unsure which animation to use, pick "idle" (the default resting pose)
       const data: LlmResponse = await response.json()
       const content = data.choices?.[0]?.message?.content ?? ''
 
-      // Parse the JSON response from the LLM
+      // Extract and parse JSON from the LLM output
+      const jsonStr = extractJson(content)
+
+      if (!jsonStr) {
+        if (attempt <= 2) {
+          // Retry with a stricter prompt
+          console.warn(`[RealLlmResponder] Failed to extract JSON (attempt ${attempt}), retrying...`)
+          return this.respond(message, history, attempt + 1)
+        }
+        console.warn('[RealLlmResponder] LLM did not return valid JSON after retries, using fallback')
+        return { text: content.trim() || "I'm sorry, I couldn't process that right now.", expression: 'neutral' }
+      }
+
       let parsed: ChatResponse
       try {
-        parsed = JSON.parse(content)
+        parsed = JSON.parse(jsonStr)
       } catch {
-        // Fallback: if the LLM didn't return valid JSON, wrap the text
-        console.warn('[RealLlmResponder] LLM did not return valid JSON, using fallback')
-        parsed = { text: content, expression: 'neutral' }
+        console.warn('[RealLlmResponder] Extracted text is not valid JSON:', jsonStr)
+        return { text: content.trim() || "I'm sorry, I couldn't process that right now.", expression: 'neutral' }
       }
 
       return {

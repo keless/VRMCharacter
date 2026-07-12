@@ -7,7 +7,7 @@ An Electron desktop app that displays a 3D VRM/VRoid character with LLM-driven c
 - **3D Character Display**: Load and display VRM models (VRoid Studio 2 compatible)
 - **Character Customization**: Swap hair and clothing via the customization panel
 - **LLM-Driven Chat**: Talk to your character through a floating chat panel powered by a local LLM
-- **50+ Animations**: Play Mixamo and VRMA animations retargeted to the VRM skeleton
+- **50+ Animations**: Play Mixamo animations retargeted to the VRM skeleton
 - **Blendshape Expressions**: Character shows facial expressions (happy, sad, neutral) during chat
 - **JSON Response Format**: LLM returns response text + animation suggestion + expression in a single JSON payload
 
@@ -87,16 +87,12 @@ If no LLM is configured or the request fails, the app falls back to a keyword-ba
 
 ### Adding Animations
 
-Built-in animations are loaded from `public/animations/index.json`. Each entry specifies an animation ID, display name, file path, and type (`fbx` or `vrma`).
+Built-in animations are loaded from `public/animations/index.json`. Each entry specifies an animation ID, display name, and file path.
 
 **Mixamo animations** (`.fbx`):
 1. Export from Mixamo as **glTF (.glb)**
 2. Place `.glb` files in `public/animations/`
 3. Add entries to `public/animations/index.json`
-
-**VRMA animations** (`.vrma`):
-1. Place `.vrma` files in `public/animations/`
-2. Add entries to `public/animations/index.json` with `"type": "vrma"`
 
 ### Animation Retargeting
 

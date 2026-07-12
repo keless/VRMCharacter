@@ -47,14 +47,6 @@
     { "id": "female-standing", "name": "Female Standing", "description": "Default female standing pose — neutral stance" },
     { "id": "female-locomotion", "name": "Female Locomotion", "description": "Ready locomotion pose — prepared to move" },
     { "id": "female-laying-pose", "name": "Female Laying", "description": "Female lying down pose" },
-    { "id": "male-laying", "name": "Male Laying", "description": "Male lying down pose" },
-    { "id": "vrma-full-body", "name": "VRMA Full Body", "description": "Full-body VRMA animation — expressive whole-body motion" },
-    { "id": "vrma-greeting", "name": "VRMA Greeting", "description": "VRMA-native greeting — wave or bow (correct VRM skeleton)" },
-    { "id": "vrma-peace", "name": "VRMA Peace Sign", "description": "VRMA-native peace sign pose (correct VRM skeleton)" },
-    { "id": "vrma-shoot", "name": "VRMA Shoot", "description": "VRMA-native pointing/shooting pose (correct VRM skeleton)" },
-    { "id": "vrma-spin", "name": "VRMA Spin", "description": "VRMA-native spin/twirl (correct VRM skeleton)" },
-    { "id": "vrma-pose", "name": "VRMA Pose", "description": "VRMA-native model pose (correct VRM skeleton)" },
-    { "id": "vrma-squat", "name": "VRMA Squat", "description": "VRMA-native squat (correct VRM skeleton)" },
-    { "id": "relieved-sigh", "name": "Relieved Sigh", "description": "Sighing with relief — 'phew, that's over'" }
+    { "id": "male-laying", "name": "Male Laying", "description": "Male lying down pose" }
   ]
 }
