@@ -83,7 +83,7 @@ export default function CharacterScene({
 
         {/* Camera Controls */}
         <OrbitControls
-          target={[offset, 1.0, 0]}
+          target={[0, 0, 0]}
           minDistance={1.5}
           maxDistance={6}
           minPolarAngle={Math.PI * 0.1}
