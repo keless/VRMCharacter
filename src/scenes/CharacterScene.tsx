@@ -54,7 +54,7 @@ export default function CharacterScene({
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
       <Canvas
-        camera={{ position: [offset, 1.1, 2.5], fov: 50, near: 0.1, far: 100 }}
+        camera={{ position: [offset, 0.8, 2.5], fov: 50, near: 0.1, far: 100 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: '#1a1a2e' }}
       >
@@ -83,7 +83,7 @@ export default function CharacterScene({
 
         {/* Camera Controls */}
         <OrbitControls
-          target={[offset, 1.2, 0]}
+          target={[offset, 1.0, 0]}
           minDistance={1.5}
           maxDistance={6}
           minPolarAngle={Math.PI * 0.1}
