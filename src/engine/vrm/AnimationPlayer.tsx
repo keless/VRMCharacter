@@ -441,12 +441,15 @@ export default function AnimationPlayer({
     [mixer, model, onAnimationEnded, vrmCore],
   )
 
-  // React to currentAnimation changes
+  // React to currentAnimation changes.
+  // Also re-run when model becomes available — if currentAnimation was set
+  // before the VRM loaded, playAnimation would have returned early. Now that
+  // model is ready, play the queued animation.
   useEffect(() => {
-    if (currentAnimation) {
+    if (currentAnimation && model) {
       playAnimation(currentAnimation)
     }
-  }, [currentAnimation, playAnimation])
+  }, [currentAnimation, playAnimation, model])
 
   // Tick the mixer
   useFrame((_state, delta) => {

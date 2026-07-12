@@ -46,6 +46,15 @@ export default function App() {
   const appLog = logger('App')
 
   // Animation selection is driven by chat responses via handleCharacterResponse.
+  // Start idle animation as soon as the VRM body is loaded.
+  useEffect(() => {
+    if ((bodyAsset || bodyBuffer) && !currentAnimation) {
+      const idle = animationController.resolve('idle')
+      if (idle) {
+        setCurrentAnimation(idle)
+      }
+    }
+  }, [bodyAsset, bodyBuffer, currentAnimation])
 
   // Hidden file inputs (hair/clothing only — body uses Electron dialog)
   const hairInputRef = useRef<HTMLInputElement>(null)
@@ -258,7 +267,8 @@ export default function App() {
         currentAnimation={currentAnimation}
         onAnimationEnded={() => {
           // When an animation finishes, transition to the idle animation
-          // which loops continuously as the default pose
+          // which loops continuously as the default pose. Skip if already idle.
+          if (currentAnimation === 'builtin-idle') return
           const idle = animationController.resolve('idle')
           if (idle) {
             setCurrentAnimation(idle)
