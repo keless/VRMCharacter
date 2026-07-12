@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
@@ -44,7 +43,7 @@ export default function CharacterModel({
 
   const mixerRef = useRef<THREE.AnimationMixer | null>(null)
   const vrmRef = useRef<unknown>(null)
-  const wireframeRef = useRef<THREE.Mesh>(null)
+  const _wireframeRef = useRef<THREE.Mesh>(null) // removed: debug wireframe
   const isLoadingRef = useRef(false)
 
   // Helper: load a VRM file from a File object using GLTFLoader.parse()
@@ -359,20 +358,6 @@ export default function CharacterModel({
     )
   }, [clothingAsset, loading])
 
-  // Update debug wireframe bounds
-  useFrame(() => {
-    if (!loaded || !groupRef.current || !wireframeRef.current) return
-    const model = groupRef.current.children[0] as THREE.Group
-    if (!model) return
-
-    const box = new THREE.Box3().setFromObject(model)
-    const size = box.getSize(new THREE.Vector3())
-    const center = box.getCenter(new THREE.Vector3())
-
-    wireframeRef.current.position.copy(center)
-    wireframeRef.current.scale.copy(size).multiplyScalar(1.05)
-  })
-
   // Always render the group — placeholders go inside
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -388,14 +373,6 @@ export default function CharacterModel({
           <meshStandardMaterial color="#aa4444" />
         </mesh>
       )}
-      {/* Debug wireframe (always visible when loaded) */}
-      {loaded && (
-        <mesh ref={wireframeRef} visible={true}>
-          <boxGeometry />
-          <meshBasicMaterial color="#00ff00" wireframe transparent opacity={0.3} />
-        </mesh>
-      )}
-
       <AnimationPlayer
         mixer={mixerRef.current}
         model={loaded ? (groupRef.current!.children[0] as THREE.Group) : null}

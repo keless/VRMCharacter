@@ -33,7 +33,7 @@ export default function CharacterScene({
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
       <Canvas
-        camera={{ position: [0, 1.4, 2.5], fov: 50, near: 0.1, far: 100 }}
+        camera={{ position: [0, 1.1, 2.5], fov: 50, near: 0.1, far: 100 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: '#1a1a2e' }}
       >
