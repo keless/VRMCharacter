@@ -122,14 +122,16 @@ export class AnimationController {
    * appear inside other words (e.g., "shif**ting**", "disagre**e**").
    */
   resolve(keyword: string): string | null {
-    const lower = keyword.toLowerCase().trim()
+    // Normalize: replace hyphens with spaces so "weight-shift" matches "weight shift"
+    // and "look over shoulder" style keywords work regardless of separator.
+    const lower = keyword.toLowerCase().trim().replace(/-/g, ' ')
 
     // Flatten all keywords with their entry animationId, sort by length descending.
     // This ensures "weight shift" (12 chars) is checked before "hi" (2 chars).
     const flat: { kw: string; animationId: string }[] = []
     for (const entry of KEYWORD_MAP) {
       for (const kw of entry.keywords) {
-        flat.push({ kw: kw.toLowerCase(), animationId: entry.animationId })
+        flat.push({ kw: kw.toLowerCase().replace(/-/g, ' '), animationId: entry.animationId })
       }
     }
     flat.sort((a, b) => b.kw.length - a.kw.length)
