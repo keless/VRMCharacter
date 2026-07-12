@@ -23,7 +23,6 @@ export default function CharacterModel({
   animations,
   currentAnimation,
   onAnimationEnded,
-  onDebugInfo,
 }: {
   bodyAsset: CharacterAsset
   bodyBuffer?: ArrayBuffer
@@ -32,7 +31,6 @@ export default function CharacterModel({
   animations: AnimationAsset[]
   currentAnimation: string | null
   onAnimationEnded: () => void
-  onDebugInfo: (info: string) => void
 }) {
   // Always-rendered group — ref must be available during useEffect
   const groupRef = useRef<THREE.Group>(null)
@@ -188,7 +186,6 @@ export default function CharacterModel({
           animLog.log('VRM Load (buffer):', info)
           animLog.log('userData keys:', Object.keys(model.userData))
           animLog.log('VRM data present:', !!vrmData)
-          onDebugInfo(info)
 
           groupRef.current!.add(model)
 
@@ -271,7 +268,6 @@ export default function CharacterModel({
         animLog.log('VRM Load:', info)
         animLog.log('userData keys:', Object.keys(model.userData))
         animLog.log('VRM data present:', !!vrmData)
-        onDebugInfo(info)
 
         groupRef.current!.add(model)
 
@@ -308,7 +304,7 @@ export default function CharacterModel({
         isLoadingRef.current = false
       }
     )
-  }, [bodyAssetLoaded, bodyBuffer, onDebugInfo])
+  }, [bodyAssetLoaded, bodyBuffer])
 
   // Cleanup
   useEffect(() => {

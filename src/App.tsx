@@ -37,7 +37,6 @@ export default function App() {
   const [clothingAsset, setClothingAsset] = useState<CharacterAsset | null>(null)
   const [animations, setAnimations] = useState<AnimationAsset[]>([])
   const [currentAnimation, setCurrentAnimation] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string>('')
   const [appReady, setAppReady] = useState(false)
   const [bodyBuffer, setBodyBuffer] = useState<ArrayBuffer | null>(null)
   const autoLoadedRef = useRef(false)
@@ -275,8 +274,6 @@ export default function App() {
           }
         }}
         onLoadBody={handleBodySelect}
-        debugInfo={debugInfo}
-        onDebugInfo={setDebugInfo}
       />
 
       {/* Floating UI Panels */}

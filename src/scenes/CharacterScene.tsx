@@ -14,8 +14,6 @@ interface CharacterSceneProps {
   currentAnimation: string | null
   onAnimationEnded: () => void
   onLoadBody: () => void
-  debugInfo: string
-  onDebugInfo: (info: string) => void
 }
 
 export default function CharacterScene({
@@ -27,8 +25,6 @@ export default function CharacterScene({
   currentAnimation,
   onAnimationEnded,
   onLoadBody,
-  debugInfo,
-  onDebugInfo,
 }: CharacterSceneProps) {
   return (
     <div style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}>
@@ -81,17 +77,9 @@ export default function CharacterScene({
             animations={animations}
             currentAnimation={currentAnimation}
             onAnimationEnded={onAnimationEnded}
-            onDebugInfo={onDebugInfo}
           />
         )}
       </Canvas>
-
-      {/* Debug info overlay */}
-      {debugInfo && (
-        <div style={styles.debugOverlay}>
-          <div style={styles.debugText}>{debugInfo}</div>
-        </div>
-      )}
 
       {/* No character overlay */}
       {!bodyAsset && !bodyBuffer && (
@@ -160,22 +148,5 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     cursor: 'pointer',
-  },
-  debugOverlay: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 10,
-    padding: '8px 12px',
-    background: 'rgba(0, 0, 0, 0.7)',
-    borderRadius: 8,
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#00ff00',
-    maxWidth: '60vw',
-    wordBreak: 'break-all',
-  },
-  debugText: {
-    lineHeight: 1.4,
   },
 }
