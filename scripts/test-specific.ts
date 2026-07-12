@@ -1,62 +1,45 @@
-import type { AnimationAsset } from '../../types'
-
 /**
- * Semantic keyword → animation ID mapping.
- * VRMA animations are listed first (VRM-native, correct skeleton).
- * FBX fallbacks are listed after (Mixamo skeleton, won't animate VRM correctly).
- * Order matters: first match wins.
+ * Test specific user inputs to see what animations they resolve to.
  */
-const KEYWORD_MAP: { keywords: string[]; animationId: string }[] = [
-  // === VRMA animations (VRM-native, correct skeleton) ===
-  // Greetings
-  { keywords: ['hello', 'hi', 'hey', 'greet', 'greeting', 'wave', 'hello there', 'good morning', 'good afternoon', 'good evening', 'bow', 'formal greeting'], animationId: 'vrma-greeting' },
-  // Peace / victory
-  { keywords: ['peace', 'peace sign', 'v sign', 'victory'], animationId: 'vrma-peace' },
-  // Spin
-  { keywords: ['spin', 'spin around', 'twirl', 'rotate'], animationId: 'vrma-spin' },
-  // Squat
-  { keywords: ['squat', 'squatting', 'deep squat'], animationId: 'vrma-squat' },
-  // Shoot / point
-  { keywords: ['shoot', 'pointing', 'aim', 'target'], animationId: 'vrma-shoot' },
-  // Model pose / standing
-  { keywords: ['female standing pose', 'female standing', 'standing pose', 'standing', 'stand', 'stand still', 'freeze', 'default pose'], animationId: 'female-standing' },
-  { keywords: ['pose', 'posing', 'model pose', 'fashion pose'], animationId: 'vrma-pose' },
-  // Full body / dance
-  { keywords: ['dancing', 'twerk', 'dance', 'boogie', 'groove', 'jam', 'move it', 'celebrate', 'party'], animationId: 'dance' },
-  { keywords: ['full body', 'full body animation'], animationId: 'vrma-full-body' },
+import { readFileSync } from 'fs'
+import { resolve } from 'path'
 
-  // === FBX fallbacks (Mixamo skeleton — may not animate correctly on VRM) ===
-  // Greetings / acknowledgments
+// Load the actual AnimationController
+const index = JSON.parse(readFileSync(resolve(__dirname, '../public/animations/index.json'), 'utf8'))
+const animationMap = new Map<string, string>()
+for (const entry of index.animations) {
+  animationMap.set(entry.id, entry.name)
+}
+
+// Reproduce the resolve function from AnimationController
+const KEYWORD_MAP: { keywords: string[]; animationId: string }[] = [
+  { keywords: ['hello', 'hi', 'hey', 'greet', 'greeting', 'wave', 'hello there', 'good morning', 'good afternoon', 'good evening', 'bow', 'formal greeting'], animationId: 'vrma-greeting' },
+  { keywords: ['peace', 'peace sign', 'v sign', 'victory'], animationId: 'vrma-peace' },
+  { keywords: ['spin', 'spin around', 'twirl', 'rotate'], animationId: 'vrma-spin' },
+  { keywords: ['squat', 'squatting', 'deep squat'], animationId: 'vrma-squat' },
+  { keywords: ['shoot', 'pointing', 'aim', 'target'], animationId: 'vrma-shoot' },
+  { keywords: ['pose', 'posing', 'model pose', 'fashion pose', 'stand', 'standing', 'stand still', 'freeze', 'default pose'], animationId: 'vrma-pose' },
+  { keywords: ['full body', 'full body animation', 'dance', 'dancing', 'twerk', 'boogie', 'groove', 'jam', 'move it', 'celebrate', 'party'], animationId: 'vrma-full-body' },
   { keywords: ['acknowledge', 'acknowledging', 'acknowledgement', 'nod', 'yes', 'agree', 'agreed', 'sure', 'right', 'exactly'], animationId: 'acknowledging' },
   { keywords: ['hard nod', 'vigorously nod', 'strong nod'], animationId: 'hard-nod' },
   { keywords: ['lengthy nod', 'long nod', 'deep nod'], animationId: 'lengthy-nod' },
   { keywords: ['sarcastic nod', 'sarcastic', 'ironic', 'doubt', 'skeptical', 'hmm', 'really'], animationId: 'sarcastic-nod' },
-
-  // Negation / disagreement
   { keywords: ['no', 'nope', 'deny', 'disagree', 'wrong', 'incorrect', 'false', 'never', 'not'], animationId: 'shake-no' },
   { keywords: ['thoughtful', 'thinking', 'think about', 'ponder', 'consider', 'let me see'], animationId: 'thoughtful-shake' },
   { keywords: ['annoyed', 'annoying', 'irritated', 'frustrated', 'ugh', 'come on'], animationId: 'annoyed-head-shake' },
   { keywords: ['angry', 'mad', 'furious', 'pissed', 'rage', 'annoying gesture'], animationId: 'angry-gesture' },
-
-  // Happiness / positive
   { keywords: ['happy', 'glad', 'joy', 'excited', 'awesome', 'cool', 'great', 'fantastic', 'wonderful', 'amazing', 'yay', 'woo'], animationId: 'excited' },
   { keywords: ['clap', 'clapping', 'applause', 'bravo', 'hand gesture', 'happy gesture'], animationId: 'clapping' },
   { keywords: ['cute', 'pretty', 'beautiful', 'love', 'like', 'adorable', 'sweet', 'charming'], animationId: 'happy-gesture' },
   { keywords: ['weight shift', 'shifting', 'casual', 'chill', 'relaxed', 'leaning'], animationId: 'weight-shift' },
   { keywords: ['look away', 'looking away', 'shy', 'embarrassed', 'bashful', 'coy'], animationId: 'look-away' },
-
-  // Sadness / negative
   { keywords: ['sad', 'unhappy', 'depressed', 'down', 'cry', 'crying', 'tears', 'upset', 'heartbroken'], animationId: 'defeat' },
   { keywords: ['sigh', 'relieved', 'phew', 'relief', 'whew'], animationId: 'relieved-sigh' },
-
-  // Communication / expressions
   { keywords: ['joke', 'funny', 'laugh', 'haha', 'lol', 'humor', 'humour', 'comedy'], animationId: 'excited' },
   { keywords: ['secret', 'tell a secret', 'whisper', 'confide', 'confession'], animationId: 'telling-secret' },
   { keywords: ['look over shoulder', 'looking over shoulder', 'peek', 'sneak', 'curious'], animationId: 'look-over-shoulder' },
   { keywords: ['cocky', 'arrogant', 'smug', 'conceited', 'swag', 'cool guy'], animationId: 'being-cocky' },
   { keywords: ['dismissive', 'dismissing', 'whatever', 'shrug', 'idc', 'i dont care'], animationId: 'dismissing-gesture' },
-
-  // Movement
   { keywords: ['walk', 'walking', 'stroll', 'amble', 'wander'], animationId: 'walking' },
   { keywords: ['run', 'running', 'sprint', 'dash', 'race', 'hurry'], animationId: 'running' },
   { keywords: ['jog', 'jogging'], animationId: 'jogging' },
@@ -68,8 +51,6 @@ const KEYWORD_MAP: { keywords: string[]; animationId: string }[] = [
   { keywords: ['right strafe', 'strafe right', 'move right', 'go right'], animationId: 'right-strafe' },
   { keywords: ['left walk', 'walk left'], animationId: 'left-strafe-walk' },
   { keywords: ['right walk', 'walk right'], animationId: 'right-strafe-walk' },
-
-  // Poses / states
   { keywords: ['sit', 'sitting', 'sit down', 'take a seat', 'seat'], animationId: 'sitting' },
   { keywords: ['sit angry', 'angry sit', 'mad sit', 'pout'], animationId: 'sitting-angry' },
   { keywords: ['sit clap', 'sitting clap', 'seat clap'], animationId: 'sitting-clap' },
@@ -86,83 +67,98 @@ const KEYWORD_MAP: { keywords: string[]; animationId: string }[] = [
   { keywords: ['situp', 'sit up', 'get up', 'stand up', 'rise'], animationId: 'situp-to-idle' },
 ]
 
-/**
- * AnimationController manages the mapping between semantic keywords
- * and actual animation files. The AI/chat layer uses keywords; the
- * controller resolves them to the best available animation.
- */
-export class AnimationController {
-  private assets: AnimationAsset[] = []
-  private loadedClipNames = new Map<string, string>() // animationId → primary clip name
-
-  /**
-   * Register available animation assets.
-   */
-  setAssets(assets: AnimationAsset[]): void {
-    this.assets = assets
-  }
-
-  /**
-   * Register a clip name for an animation ID (called when AnimationPlayer loads a clip).
-   * animationId is the full asset ID (e.g., "builtin-standing-greeting").
-   */
-  registerClip(animationId: string, clipName: string): void {
-    // Only set if not already registered (first clip wins for single-clip animations)
-    if (!this.loadedClipNames.has(animationId)) {
-      this.loadedClipNames.set(animationId, clipName)
+function resolve(keyword: string): string | null {
+  const lower = keyword.toLowerCase().trim()
+  const flat: { kw: string; animationId: string }[] = []
+  for (const entry of KEYWORD_MAP) {
+    for (const kw of entry.keywords) {
+      flat.push({ kw: kw.toLowerCase(), animationId: entry.animationId })
     }
   }
-
-  /**
-   * Resolve a semantic keyword to an animation ID.
-   * Returns the FULL asset ID (e.g., "builtin-standing-greeting") so it matches loaded clips.
-   *
-   * Keywords are matched by length (longest first) so that multi-word phrases like
-   * "weight shift" are checked before short substrings like "hi" or "no" that could
-   * appear inside other words (e.g., "shif**ting**", "disagre**e**").
-   */
-  resolve(keyword: string): string | null {
-    const lower = keyword.toLowerCase().trim()
-
-    // Flatten all keywords with their entry animationId, sort by length descending.
-    // This ensures "weight shift" (12 chars) is checked before "hi" (2 chars).
-    const flat: { kw: string; animationId: string }[] = []
-    for (const entry of KEYWORD_MAP) {
-      for (const kw of entry.keywords) {
-        flat.push({ kw: kw.toLowerCase(), animationId: entry.animationId })
-      }
+  flat.sort((a, b) => b.kw.length - a.kw.length)
+  for (const { kw, animationId } of flat) {
+    if (lower.includes(kw)) {
+      return `builtin-${animationId}`
     }
-    flat.sort((a, b) => b.kw.length - a.kw.length)
-
-    for (const { kw, animationId } of flat) {
-      if (lower.includes(kw)) {
-        return `builtin-${animationId}`
-      }
-    }
-
-    return null
   }
-
-  /**
-   * Get the clip key for a full animation ID.
-   * Returns null if no clip name is registered — callers should fall back to
-   * searching by animation ID prefix.
-   */
-  getClipKey(animationId: string): string | null {
-    const clipName = this.loadedClipNames.get(animationId)
-    if (clipName) {
-      return `${animationId}:${clipName}`
-    }
-    return null
-  }
-
-  /**
-   * List all available animation IDs.
-   */
-  listAnimations(): { id: string; name: string }[] {
-    return this.assets.map((a) => ({ id: a.id.replace('builtin-', ''), name: a.name }))
-  }
+  return null
 }
 
-// Singleton instance
-export const animationController = new AnimationController()
+// Test the specific failing inputs
+const tests = [
+  'dancing twerk',
+  'dancing',
+  'twerk',
+  'weight shift',
+  'weight',
+  'female standing pose',
+  'female standing',
+  'standing pose',
+  'standing',
+  'pose',
+  'female locomotion',
+  'locomotion',
+]
+
+console.log('=== Specific Input Tests ===\n')
+for (const input of tests) {
+  const resolved = resolve(input)
+  // Find the animation name from the index
+  let animName = '?'
+  if (resolved) {
+    // Try to find matching animation in index
+    for (const entry of index.animations) {
+      if (entry.id === resolved.replace('builtin-', '') || resolved.includes(entry.id)) {
+        animName = entry.name
+        break
+      }
+    }
+    // Also check if it's a vrma animation
+    if (animName === '?') {
+      const vrmaMap: Record<string, string> = {
+        'vrma-greeting': 'Standing Greeting',
+        'vrma-peace': 'Peace',
+        'vrma-spin': 'Spin',
+        'vrma-squat': 'Squat',
+        'vrma-shoot': 'Shoot',
+        'vrma-pose': 'Female Standing Pose',
+        'vrma-full-body': 'Dancing Twerk',
+      }
+      animName = vrmaMap[resolved.replace('builtin-', '')] || resolved
+    }
+  }
+  console.log(`  '${input}' → ${resolved} (${animName})`)
+}
+
+// Also show which keywords matched for each
+console.log('\n=== Match Details ===\n')
+for (const input of tests) {
+  const lower = input.toLowerCase().trim()
+  const flat: { kw: string; animationId: string }[] = []
+  for (const entry of KEYWORD_MAP) {
+    for (const kw of entry.keywords) {
+      flat.push({ kw: kw.toLowerCase(), animationId: entry.animationId })
+    }
+  }
+  flat.sort((a, b) => b.kw.length - a.kw.length)
+  // Find all matching keywords
+  const matches: { kw: string; animationId: string }[] = []
+  for (const { kw, animationId } of flat) {
+    if (lower.includes(kw)) {
+      matches.push({ kw, animationId })
+    }
+  }
+  if (matches.length > 0 && matches.length < 5) {
+    console.log(`  '${input}':`)
+    for (const m of matches) {
+      console.log(`    matches '${m.kw}' → ${m.animationId}`)
+    }
+    console.log()
+  } else if (matches.length >= 5) {
+    console.log(`  '${input}': ${matches.length} matches (showing top 3):`)
+    for (const m of matches.slice(0, 3)) {
+      console.log(`    matches '${m.kw}' → ${m.animationId}`)
+    }
+    console.log()
+  }
+}
