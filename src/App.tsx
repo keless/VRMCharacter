@@ -4,7 +4,9 @@ import ChatPanel from './components/ChatPanel'
 import AssetPicker from './components/AssetPicker'
 import { loadBuiltInAnimations } from './engine/vrm/AnimationLoader'
 import { animationController } from './engine/vrm/AnimationController'
-import { logger, setLogging, isEnabled } from './lib/logger'
+import { RealLlmResponder } from './engine/chat/RealLlmResponder'
+import type { ChatHistoryEntry } from './engine/chat/LlmResponder'
+import { logger, setLogging, isEnabled, disableCategory } from './lib/logger'
 import type { CharacterAsset, ChatMessage, AnimationAsset } from './types'
 
 // Global error handler (always on)
@@ -21,13 +23,17 @@ window.addEventListener('unhandledrejection', (e) => {
 const debugFlag = (import.meta.env as any).VITE_DEBUG_LOGS
 if (debugFlag) {
   setLogging(true)
+  disableCategory('AnimationPlayer')
 }
 // Also allow runtime toggle: window.__DEBUG_LOGGING__ = true
 Object.defineProperty(window, '__DEBUG_LOGGING__', {
   configurable: true,
   enumerable: false,
   get(): boolean { return isEnabled() },
-  set(value: boolean) { setLogging(value) },
+  set(value: boolean) {
+    setLogging(value)
+    if (value) disableCategory('AnimationPlayer')
+  },
 })
 
 export default function App() {
@@ -39,7 +45,11 @@ export default function App() {
   const [currentAnimation, setCurrentAnimation] = useState<string | null>(null)
   const [appReady, setAppReady] = useState(false)
   const [bodyBuffer, setBodyBuffer] = useState<ArrayBuffer | null>(null)
+  const [llmHistory, setLlmHistory] = useState<ChatHistoryEntry[]>([])
   const autoLoadedRef = useRef(false)
+
+  // LLM responder instance (loads config at runtime from public/llm-config.json)
+  const realResponder = new RealLlmResponder()
 
   // Diagnostic logger (enabled via VITE_DEBUG_LOGS=1)
   const appLog = logger('App')
@@ -215,6 +225,12 @@ export default function App() {
       }
       setMessages((prev) => [...prev, charMessage])
 
+      // Track history for LLM context (last 20 exchanges)
+      setLlmHistory((prev) => [
+        ...prev.slice(-19),
+        { role: 'assistant', content: response.text },
+      ])
+
       // Auto-play animation if the responder provided one
       if (response.animationId) {
         const resolved = animationController.resolve(response.animationId)
@@ -278,6 +294,8 @@ export default function App() {
         messages={messages}
         onSend={handleSendMessage}
         onCharacterResponse={handleCharacterResponse}
+        llmResponder={realResponder}
+        llmHistory={llmHistory}
       />
 
     </div>

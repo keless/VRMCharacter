@@ -3,7 +3,7 @@ import { logger } from '../lib/logger'
 
 const chatLog = logger('ChatPanel')
 import type { ChatMessage } from '../types'
-import { mockResponder } from '../engine/chat/MockResponder'
+import type { LlmResponder, ChatHistoryEntry } from '../engine/chat/LlmResponder'
 import { animationController } from '../engine/vrm/AnimationController'
 
 interface ChatPanelProps {
@@ -14,12 +14,16 @@ interface ChatPanelProps {
     animationId?: string
     expression?: string
   }) => void
+  llmResponder: LlmResponder
+  llmHistory: ChatHistoryEntry[]
 }
 
 export default function ChatPanel({
   messages,
   onSend,
   onCharacterResponse,
+  llmResponder,
+  llmHistory,
 }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -40,7 +44,7 @@ export default function ChatPanel({
     setSending(true)
 
     try {
-      const response = await mockResponder.respond(text)
+      const response = await llmResponder.respond(text, llmHistory)
       // Resolve the keyword to an actual animation ID
       let animationId: string | undefined
       if (response.animationId) {

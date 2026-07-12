@@ -19,6 +19,7 @@
 // ── State ────────────────────────────────────────────────────────────────────
 
 let enabled = false
+const disabledCategories = new Set<string>()
 
 /**
  * Enable or disable all diagnostic logging.
@@ -31,6 +32,14 @@ export function setLogging(value: boolean): void {
 
 export function isEnabled(): boolean {
   return enabled
+}
+
+/**
+ * Disable logging for a specific category.
+ * Useful when debug logging is on but a particular category is too verbose.
+ */
+export function disableCategory(category: string): void {
+  disabledCategories.add(category)
 }
 
 // ── Logger factory ───────────────────────────────────────────────────────────
@@ -56,17 +65,18 @@ interface Logger {
  */
 export function logger(category: string): Logger {
   const prefix = `[${category}]`
+  const isDisabled = disabledCategories.has(category)
 
   return {
     log: (...args: unknown[]) => {
-      if (enabled) console.log(prefix, ...args)
+      if (enabled && !isDisabled) console.log(prefix, ...args)
     },
     warn: (...args: unknown[]) => {
-      if (enabled) console.warn(prefix, ...args)
+      if (enabled && !isDisabled) console.warn(prefix, ...args)
     },
     error: (...args: unknown[]) => {
-      // Global errors always emit; everything else gated
-      if (enabled || category === 'Global') console.error(prefix, ...args)
+      // Global errors always emit; disabled categories never emit; everything else gated
+      if ((enabled || category === 'Global') && !isDisabled) console.error(prefix, ...args)
     },
   }
 }
