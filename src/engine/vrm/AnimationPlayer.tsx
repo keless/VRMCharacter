@@ -396,6 +396,11 @@ export default function AnimationPlayer({
           action.weight = eased
           if (fadeProgress < FADE_STEPS) {
             setTimeout(fadeStep, STEP_TIME)
+          } else {
+            // Crossfade complete — stop the old action to remove it from
+            // the mixer's evaluation list, preventing it from interfering
+            // with the new animation's bone transforms.
+            prevAction!.stop()
           }
         }
 
