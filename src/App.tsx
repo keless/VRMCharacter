@@ -228,18 +228,6 @@ export default function App() {
 
   return (
     <div style={styles.container}>
-      {/* Debug status indicator */}
-      <div style={styles.statusBar}>
-        <span style={{
-          ...styles.statusDot,
-          backgroundColor: appReady ? '#00ff00' : '#ff0000',
-        }} />
-        <span style={styles.statusText}>
-          {appReady ? 'READY' : 'LOADING...'}
-          {bodyAsset ? ` | Body: ${bodyAsset.name}` : ' | No body'}
-        </span>
-      </div>
-
       {/* Hidden file inputs (hair/clothing only — body uses Electron dialog) */}
       <input
         ref={hairInputRef}
@@ -303,29 +291,5 @@ const styles: Record<string, React.CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
     background: '#1a1a2e',
-  },
-  statusBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 100,
-    padding: '4px 12px',
-    background: 'rgba(0, 0, 0, 0.8)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#ccc',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    display: 'inline-block',
-  },
-  statusText: {
-    fontFamily: 'monospace',
   },
 }
