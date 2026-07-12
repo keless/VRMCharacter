@@ -2,7 +2,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react'
 import CharacterScene from './scenes/CharacterScene'
 import ChatPanel from './components/ChatPanel'
 import AssetPicker from './components/AssetPicker'
-import AnimationPicker from './components/AnimationPicker'
 import { loadBuiltInAnimations } from './engine/vrm/AnimationLoader'
 import { animationController } from './engine/vrm/AnimationController'
 import { logger, setLogging, isEnabled } from './lib/logger'
@@ -47,7 +46,7 @@ export default function App() {
   // Diagnostic logger (enabled via VITE_DEBUG_LOGS=1)
   const appLog = logger('App')
 
-  // Idle cycling disabled — animation selection is now manual-only via the AnimationPicker.
+  // Animation selection is driven by chat responses via handleCharacterResponse.
 
   // Hidden file inputs (hair/clothing only — body uses Electron dialog)
   const hairInputRef = useRef<HTMLInputElement>(null)
@@ -208,24 +207,17 @@ export default function App() {
         expression: response.expression,
       }
       setMessages((prev) => [...prev, charMessage])
-      // Animation selection is now manual-only via the AnimationPicker.
-      // The animationId/expression from the responder is stored in the
-      // message for logging but no longer triggers playback.
+
+      // Auto-play animation if the responder provided one
+      if (response.animationId) {
+        const resolved = animationController.resolve(response.animationId)
+        if (resolved) {
+          setCurrentAnimation(resolved)
+        }
+      }
     },
     []
   )
-
-  // Manual animation control (AnimationPicker)
-  const handlePlayAnimation = useCallback(
-    (animationId: string) => {
-      setCurrentAnimation(animationId)
-    },
-    []
-  )
-
-  const handleLoopToggle = useCallback((looping: boolean) => {
-    setIsLooping(looping)
-  }, [])
 
   return (
     <div style={styles.container}>
@@ -296,14 +288,6 @@ export default function App() {
         onCharacterResponse={handleCharacterResponse}
       />
 
-      {/* Animation picker — bottom left */}
-      <AnimationPicker
-        animations={animations}
-        currentAnimation={currentAnimation}
-        onPlay={handlePlayAnimation}
-        isLooping={isLooping}
-        onLoopToggle={handleLoopToggle}
-      />
     </div>
   )
 }
