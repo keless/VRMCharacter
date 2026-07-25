@@ -5,7 +5,8 @@ import AssetPicker from './components/AssetPicker'
 import { loadBuiltInAnimations } from './engine/vrm/AnimationLoader'
 import { animationController } from './engine/vrm/AnimationController'
 import { RealLlmResponder } from './engine/chat/RealLlmResponder'
-import type { ChatHistoryEntry } from './engine/chat/LlmResponder'
+import { mockLlmResponder } from './engine/chat/LlmResponder'
+import type { ChatHistoryEntry, LlmResponder } from './engine/chat/LlmResponder'
 import { logger, setLogging, isEnabled, disableCategory } from './lib/logger'
 import type { CharacterAsset, ChatMessage, AnimationAsset } from './types'
 
@@ -46,10 +47,14 @@ export default function App() {
   const [appReady, setAppReady] = useState(false)
   const [bodyBuffer, setBodyBuffer] = useState<ArrayBuffer | null>(null)
   const [llmHistory, setLlmHistory] = useState<ChatHistoryEntry[]>([])
+  const [driverMode, setDriverMode] = useState<'llm' | 'mock'>('mock')
   const autoLoadedRef = useRef(false)
 
   // LLM responder instance (loads config at runtime from public/llm-config.json)
   const realResponder = new RealLlmResponder()
+
+  // Active responder — swaps between mock and LLM at runtime
+  const activeResponder: LlmResponder = driverMode === 'llm' ? realResponder : mockLlmResponder
 
   // Diagnostic logger (enabled via VITE_DEBUG_LOGS=1)
   const appLog = logger('App')
@@ -184,6 +189,19 @@ export default function App() {
     // Save path to localStorage for auto-restore on next launch
     localStorage.setItem('lastVrmPath', filePath)
 
+    // Load the file via IPC first, then set both asset and buffer together
+    // in a single render to prevent the loading effect from firing with
+    // a stale buffer (which would show the previous model).
+    let bytes: Uint8Array
+    try {
+      bytes = await window.electronAPI.loadVrmFromPath(filePath)
+      appLog.log('Body VRM loaded:', bytes.length, 'bytes')
+    } catch (err: unknown) {
+      appLog.error('Failed to load body VRM:', err)
+      return
+    }
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+
     const asset: CharacterAsset = {
       id: `body-${filePath}-${Date.now()}`,
       name: filePath.split(/[/\\]/).pop()!.replace(/\.vrm$/i, ''),
@@ -191,16 +209,7 @@ export default function App() {
       filePath,
     }
     setBodyAsset(asset)
-
-    // Load the file via IPC
-    try {
-      const bytes = await window.electronAPI.loadVrmFromPath(filePath)
-      appLog.log('Body VRM loaded:', bytes.length, 'bytes')
-      const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
-      setBodyBuffer(arrayBuffer)
-    } catch (err: unknown) {
-      appLog.error('Failed to load body VRM:', err)
-    }
+    setBodyBuffer(arrayBuffer)
   }, [])
 
   const handleSendMessage = useCallback((text: string) => {
@@ -288,13 +297,15 @@ export default function App() {
         onBodySelect={handleBodySelect}
         onHairSelect={() => hairInputRef.current?.click()}
         onClothingSelect={() => clothingInputRef.current?.click()}
+        driverMode={driverMode}
+        onDriverModeChange={setDriverMode}
       />
 
       <ChatPanel
         messages={messages}
         onSend={handleSendMessage}
         onCharacterResponse={handleCharacterResponse}
-        llmResponder={realResponder}
+        llmResponder={activeResponder}
         llmHistory={llmHistory}
       />
 

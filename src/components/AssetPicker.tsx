@@ -8,6 +8,8 @@ interface AssetPickerProps {
   onBodySelect: () => void
   onHairSelect: () => void
   onClothingSelect: () => void
+  driverMode: 'llm' | 'mock'
+  onDriverModeChange: (mode: 'llm' | 'mock') => void
 }
 
 /**
@@ -22,6 +24,8 @@ export default function AssetPicker({
   onBodySelect,
   onHairSelect,
   onClothingSelect,
+  driverMode,
+  onDriverModeChange,
 }: AssetPickerProps) {
   const [open, setOpen] = useState(false)
 
@@ -99,6 +103,32 @@ export default function AssetPicker({
           <div style={styles.section}>
             <div style={styles.label}>Animations</div>
             <span style={{ ...styles.inactive, fontSize: 11 }}>67 built-in animations loaded</span>
+          </div>
+
+          <div style={styles.divider} />
+
+          <div style={styles.section}>
+            <div style={styles.label}>Chat Driver</div>
+            <div style={styles.toggleRow}>
+              <button
+                style={{
+                  ...styles.modeButton,
+                  ...(driverMode === 'mock' ? styles.modeButtonActive : {}),
+                }}
+                onClick={() => onDriverModeChange('mock')}
+              >
+                Mock
+              </button>
+              <button
+                style={{
+                  ...styles.modeButton,
+                  ...(driverMode === 'llm' ? styles.modeButtonActive : {}),
+                }}
+                onClick={() => onDriverModeChange('llm')}
+              >
+                LLM
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -184,5 +214,27 @@ const styles: Record<string, React.CSSProperties> = {
     height: 1,
     background: 'rgba(255, 255, 255, 0.08)',
     margin: '10px 0',
+  },
+  toggleRow: {
+    display: 'flex',
+    gap: 4,
+  },
+  modeButton: {
+    flex: 1,
+    padding: '6px 8px',
+    borderRadius: 6,
+    border: '1px solid rgba(100, 100, 255, 0.3)',
+    background: 'rgba(100, 100, 255, 0.1)',
+    color: '#7faaff',
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  modeButtonActive: {
+    background: 'rgba(100, 100, 255, 0.4)',
+    color: '#fff',
+    borderColor: 'rgba(100, 100, 255, 0.6)',
   },
 }
